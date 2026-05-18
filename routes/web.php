@@ -13,7 +13,6 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Cliente\ProfileController;
 use App\Http\Controllers\Cliente\OrderController as ClienteOrderController;
 
-
 // Autenticación
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'login']);
@@ -52,11 +51,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/perfil', [ProfileController::class, 'index'])->name('perfil');
         Route::put('/perfil', [ProfileController::class, 'update'])->name('perfil.update');
         Route::get('/pedidos', [ClienteOrderController::class, 'index'])->name('pedidos');
-        Route::get('/pedidos/{order}', [ClienteOrderController::class, 'show'])->name('pedidos.show');
+        Route::get('/pedidos/{id}', [ClienteOrderController::class, 'show'])->name('pedidos.show');
     });
 
-    Route::get('/mi-cuenta/pedidos/{id}', [\App\Http\Controllers\Cliente\OrderController::class, 'show'])->name('cliente.pedidos.show');
-    
     // Empleado
     Route::middleware('role:empleado,admin')->prefix('empleado')->name('empleado.')->group(function () {
         Route::get('/productos', [\App\Http\Controllers\Empleado\ProductController::class, 'index'])->name('productos');
