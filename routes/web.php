@@ -55,6 +55,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/pedidos/{order}', [ClienteOrderController::class, 'show'])->name('pedidos.show');
     });
 
+    Route::get('/mi-cuenta/pedidos/{id}', [\App\Http\Controllers\Cliente\OrderController::class, 'show'])->name('cliente.pedidos.show');
+    
     // Empleado
     Route::middleware('role:empleado,admin')->prefix('empleado')->name('empleado.')->group(function () {
         Route::get('/productos', [\App\Http\Controllers\Empleado\ProductController::class, 'index'])->name('productos');
