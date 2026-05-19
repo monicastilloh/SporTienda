@@ -32,7 +32,8 @@
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://js.stripe.com/v3/"></script>
 
-    
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3781133699759960"
+     crossorigin="anonymous"></script>
 
     @stack('styles')
 </head>
