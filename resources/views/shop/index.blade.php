@@ -13,10 +13,8 @@
         <div class="text-8xl opacity-20 absolute right-8">🏋️</div>
     </div>
 
-    <div class="flex gap-8">
-
-        <!-- Sidebar categorías -->
-        <aside class="w-64 flex-shrink-0">
+    <div class="flex flex-col md:flex-row gap-6">
+    <aside class="w-full md:w-56 flex-shrink-0">
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sticky top-20">
                 <h3 class="font-semibold text-gray-900 mb-3 text-sm uppercase tracking-wide">Categorías</h3>
                 <ul class="space-y-1">
@@ -55,7 +53,8 @@
                     <p class="text-lg">No hay productos disponibles en esta categoría.</p>
                 </div>
             @else
-                <div class="grid grid-cols-2 xl:grid-cols-3 gap-5">
+                
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                     @foreach($products as $product)
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow group">
                             <!-- Imagen -->
@@ -125,13 +124,44 @@
 
 <!-- Mapa de la tienda -->
 <div class="mt-12 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-    <div class="px-6 py-4 border-b border-gray-50">
-        <h2 class="font-semibold text-gray-900">📍 Nuestra tienda física</h2>
-        <p class="text-sm text-gray-400 mt-0.5">Visítanos y prueba el equipo antes de comprar</p>
+    <div class="px-6 py-4 border-b border-gray-50 flex items-center justify-between flex-wrap gap-3">
+        <div>
+            <h2 class="font-semibold text-gray-900">📍 Nuestra tienda física</h2>
+            <p class="text-sm text-gray-400 mt-0.5">Activa tu ubicación para ver la ruta hasta nosotros</p>
+        </div>
+        <div id="estado-ubicacion" class="flex items-center gap-2 text-sm text-gray-400">
+            <div class="w-2 h-2 rounded-full bg-gray-300 animate-pulse"></div>
+            Obteniendo ubicación...
+        </div>
     </div>
-    <div id="map" style="height: 320px; width: 100%;"></div>
-    <div class="px-6 py-4 bg-gray-50 flex items-center gap-4 text-sm text-gray-600">
-        <span>📍 Av. Deportiva 123, Col. Centro — Oaxaca, Oax.</span>
+
+    <!-- Panel de ruta -->
+    <div id="panel-ruta" class="hidden px-6 py-3 bg-blue-50 border-b border-blue-100">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+            <p id="resumen-ruta" class="text-sm font-semibold text-blue-800"></p>
+            <a href="#" id="link-maps" target="_blank"
+               class="text-xs text-blue-600 hover:underline font-medium">
+                Abrir en Google Maps →
+            </a>
+        </div>
+        <div id="instrucciones-ruta" class="mt-2 text-xs text-blue-600 space-y-1 max-h-32 overflow-y-auto"></div>
+    </div>
+
+    <!-- Mensaje si deniega ubicación -->
+    <div id="panel-sin-ubicacion" class="hidden px-6 py-3 bg-amber-50 border-b border-amber-100">
+        <p class="text-sm text-amber-700">
+            ⚠️ Activaste el bloqueo de ubicación. Para ver la ruta,
+            <strong>activa la ubicación en tu navegador</strong> y recarga la página.
+            También puedes
+            <a id="link-maps-manual" href="https://www.google.com/maps/dir/?api=1&destination=17.0654,-96.7236"
+               target="_blank" class="underline font-semibold">abrir la ruta en Google Maps</a>.
+        </p>
+    </div>
+
+    <div id="map" style="height: 420px; width: 100%;"></div>
+
+    <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex flex-wrap items-center gap-4 text-sm text-gray-600">
+        <span>📍 <strong>Av. Deportiva 123, Col. Centro — Oaxaca, Oax.</strong></span>
         <span>🕐 Lun–Sáb 9:00–20:00</span>
         <span>📞 (951) 123-4567</span>
     </div>
@@ -139,27 +169,165 @@
 
 @push('scripts')
 <script>
+let map, directionsService, directionsRenderer;
+
+const TIENDA = { lat: 17.0654, lng: -96.7236 };
+const TIENDA_NOMBRE = "SportTienda — Av. Deportiva 123, Oaxaca";
+
 function initMap() {
-    const tienda = { lat: 17.0654, lng: -96.7236 }; // Coordenadas Oaxaca
-    const map = new google.maps.Map(document.getElementById("map"), {
+    directionsService = new google.maps.DirectionsService();
+    directionsRenderer = new google.maps.DirectionsRenderer({
+        polylineOptions: {
+            strokeColor: '#0F3460',
+            strokeWeight: 5,
+            strokeOpacity: 0.8,
+        },
+    });
+
+    map = new google.maps.Map(document.getElementById("map"), {
         zoom: 15,
-        center: tienda,
+        center: TIENDA,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: true,
         styles: [
             { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
             { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
             { featureType: "road.arterial", elementType: "geometry", stylers: [{ color: "#dadada" }] },
+            { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
         ]
     });
-    new google.maps.Marker({
-        position: tienda,
-        map,
-        title: "SportTienda",
-        label: { text: "⚡", fontSize: "20px" }
+
+    directionsRenderer.setMap(map);
+
+    // Marcador de la tienda
+    const marker = new google.maps.Marker({
+        position: TIENDA,
+        map: map,
+        title: TIENDA_NOMBRE,
+        animation: google.maps.Animation.DROP,
+        icon: {
+            url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+            scaledSize: new google.maps.Size(44, 44),
+        }
+    });
+
+    // Info window
+    const infoWindow = new google.maps.InfoWindow({
+        content: `
+            <div style="font-family:'DM Sans',sans-serif;padding:8px;max-width:200px">
+                <p style="font-weight:700;font-size:14px;margin:0 0 4px">⚡ SportTienda</p>
+                <p style="color:#666;font-size:12px;margin:0 0 2px">Av. Deportiva 123, Col. Centro</p>
+                <p style="color:#666;font-size:12px;margin:0 0 2px">Oaxaca, Oax.</p>
+                <p style="color:#666;font-size:12px;margin:0 0 8px">🕐 Lun–Sáb 9:00–20:00</p>
+            </div>
+        `
+    });
+
+    // Abrir info window automáticamente
+    infoWindow.open(map, marker);
+    marker.addListener("click", () => infoWindow.open(map, marker));
+
+    // Pedir ubicación automáticamente al cargar
+    pedirUbicacion();
+}
+
+function pedirUbicacion() {
+    if (!navigator.geolocation) {
+        mostrarSinUbicacion();
+        return;
+    }
+
+    // El navegador pide permiso automáticamente aquí
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            // Usuario aceptó — trazar ruta
+            const origen = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+            };
+            trazarRuta(origen);
+        },
+        (error) => {
+            // Usuario rechazó o error
+            mostrarSinUbicacion();
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 0
+        }
+    );
+}
+
+function trazarRuta(origen) {
+    const request = {
+        origin: origen,
+        destination: TIENDA,
+        travelMode: google.maps.TravelMode.DRIVING,
+        language: 'es',
+        region: 'MX',
+    };
+
+    directionsService.route(request, (result, status) => {
+        if (status === google.maps.DirectionsStatus.OK) {
+            directionsRenderer.setDirections(result);
+
+            const leg = result.routes[0].legs[0];
+
+            // Actualizar estado
+            const estado = document.getElementById('estado-ubicacion');
+            estado.innerHTML = `
+                <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                <span class="text-green-600 font-medium">📍 Ubicación activa</span>
+            `;
+
+            // Mostrar panel de ruta
+            const panel = document.getElementById('panel-ruta');
+            panel.classList.remove('hidden');
+
+            // Resumen
+            document.getElementById('resumen-ruta').textContent =
+                `🚗 ${leg.distance.text} — aprox. ${leg.duration.text} en auto`;
+
+            // Link a Google Maps con origen real
+            const linkMaps = document.getElementById('link-maps');
+            linkMaps.href = `https://www.google.com/maps/dir/?api=1&origin=${origen.lat},${origen.lng}&destination=${TIENDA.lat},${TIENDA.lng}&travelmode=driving`;
+
+            // Instrucciones paso a paso
+            const instrucciones = document.getElementById('instrucciones-ruta');
+            let html = '';
+            leg.steps.forEach((paso, i) => {
+                const texto = paso.instructions.replace(/<[^>]*>/g, '');
+                html += `<p>${i + 1}. ${texto} <span style="opacity:0.6">(${paso.distance.text})</span></p>`;
+            });
+            instrucciones.innerHTML = html;
+
+        } else {
+            mostrarSinUbicacion();
+        }
     });
 }
+
+function mostrarSinUbicacion() {
+    // Mostrar panel de advertencia
+    document.getElementById('panel-sin-ubicacion').classList.remove('hidden');
+
+    // Actualizar estado
+    const estado = document.getElementById('estado-ubicacion');
+    estado.innerHTML = `
+        <div class="w-2 h-2 rounded-full bg-amber-400"></div>
+        <span class="text-amber-600">Ubicación no disponible</span>
+    `;
+
+    // El mapa igual muestra la tienda centrada
+    map.setCenter(TIENDA);
+    map.setZoom(15);
+}
 </script>
-<script async defer
-    src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&callback=initMap">
+<script
+    src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&callback=initMap&loading=async"
+    async defer>
 </script>
 @endpush
 
